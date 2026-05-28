@@ -1,0 +1,61 @@
+name: Google Doc → WP 書き戻し
+
+# Phase 3 未実装 - ワークフローのスタブ
+# 実装後にコメントを外して有効化する
+
+on:
+  workflow_dispatch:
+    inputs:
+      doc_id:
+        description: "Google Doc の ID（URLの /d/ここ/）"
+        required: true
+        type: string
+      post_id:
+        description: "書き戻し先の WP Post ID"
+        required: true
+        type: string
+      dry_run:
+        description: "true にすると WP への書き込みをスキップ（確認用）"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Phase 3 未実装
+        run: |
+          echo "::error::Phase 3 は未実装です。docs/features/spec.md を参照してください。"
+          exit 1
+
+      # TODO: Phase 3 実装後に以下のステップを有効化する
+      #
+      # - name: Set up Python
+      #   uses: actions/setup-python@v5
+      #   with:
+      #     python-version: "3.12"
+      #     cache: pip
+      #
+      # - name: Install dependencies
+      #   run: pip install -r requirements.txt
+      #
+      # - name: Run gdoc_to_wp
+      #   env:
+      #     WP_BASE_URL: ${{ secrets.WP_BASE_URL }}
+      #     WP_USERNAME: ${{ secrets.WP_USERNAME }}
+      #     WP_APP_PASSWORD: ${{ secrets.WP_APP_PASSWORD }}
+      #     GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+      #   run: |
+      #     python scripts/gdoc_to_wp.py \
+      #       --doc-id "${{ inputs.doc_id }}" \
+      #       --post-id "${{ inputs.post_id }}" \
+      #       --dry-run "${{ inputs.dry_run }}"

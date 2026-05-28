@@ -1,0 +1,45 @@
+name: WP Draft → Google Doc
+
+on:
+  workflow_dispatch:
+    inputs:
+      post_id:
+        description: "対象の Post ID（空で全ドラフトを対象）"
+        required: false
+        default: ""
+        type: string
+      limit:
+        description: "最大処理件数（最大20）"
+        required: false
+        default: "5"
+        type: string
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run draft_to_gdoc
+        env:
+          WP_BASE_URL: ${{ secrets.WP_BASE_URL }}
+          WP_USERNAME: ${{ secrets.WP_USERNAME }}
+          WP_APP_PASSWORD: ${{ secrets.WP_APP_PASSWORD }}
+          GDOC_FOLDER_ID: ${{ secrets.GDOC_FOLDER_ID }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          python scripts/draft_to_gdoc.py \
+            --post-id "${{ inputs.post_id }}" \
+            --limit "${{ inputs.limit }}"
