@@ -55,6 +55,8 @@ def _make_wp_session(auth: tuple[str, str]) -> requests.Session:
     """指定した認証情報でセッションを生成する。"""
     session = requests.Session()
     session.auth = auth
+    # .htaccess の User-Agent フィルタ（"python" を含む UA をブロック）を回避する
+    session.headers.update({"User-Agent": "wp-rewrite-bot/1.0"})
     return session
 
 
