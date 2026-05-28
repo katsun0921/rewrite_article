@@ -61,6 +61,46 @@ def main() -> None:
         size = int(f.get("size", 0))
         print(f"  [{f['createdTime'][:10]}] {mb(size):>10}  {f['name']}  ({f['id']})")
 
+    # リライトフォルダの確認
+    folder_id = os.environ.get("GDOC_FOLDER_ID", "")
+    if folder_id:
+        print(f"\n--- リライトフォルダの確認 (ID: {folder_id}) ---")
+        try:
+            folder = drive.files().get(
+                fileId=folder_id,
+                fields="id,name,mimeType,owners,capabilities,driveId",
+                supportsAllDrives=True,
+            ).execute()
+            print(f"フォルダ名:     {folder.get('name')}")
+            print(f"種別:           {folder.get('mimeType')}")
+            owners = folder.get("owners", [])
+            for o in owners:
+                print(f"所有者:         {o.get('emailAddress')} (ストレージ満杯: {o.get('permissionDetails', '')})")
+            caps = folder.get("capabilities", {})
+            print(f"ファイル追加可: {caps.get('canAddChildren', '不明')}")
+            print(f"書き込み可:     {caps.get('canEdit', '不明')}")
+            if folder.get("driveId"):
+                print(f"Shared Drive:   {folder['driveId']}")
+        except Exception as e:
+            print(f"⚠️  フォルダにアクセスできません: {e}")
+
+        # テスト用の小さなファイルを作成して権限を確認
+        print("\n--- テストファイル作成 ---")
+        try:
+            from googleapiclient.http import MediaInMemoryUpload
+            test_meta = {"name": "_test_write.txt", "parents": [folder_id]}
+            test_media = MediaInMemoryUpload(b"test", mimetype="text/plain", resumable=False)
+            test_file = drive.files().create(
+                body=test_meta, media_body=test_media, fields="id,webViewLink",
+                supportsAllDrives=True,
+            ).execute()
+            print(f"✅ テストファイル作成成功: {test_file['webViewLink']}")
+            # 作成したテストファイルを即削除
+            drive.files().delete(fileId=test_file["id"], supportsAllDrives=True).execute()
+            print("✅ テストファイル削除完了")
+        except Exception as e:
+            print(f"❌ テストファイル作成失敗: {e}")
+
 
 if __name__ == "__main__":
     main()
