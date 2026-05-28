@@ -13,6 +13,8 @@ from typing import Optional
 
 import requests
 from google.oauth2 import service_account
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request as GoogleRequest
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
@@ -32,6 +34,12 @@ GOOGLE_SERVICE_ACCOUNT_JSON = os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"]
 # 対象の場合、サーバーは WP_USERNAME/WP_APP_PASSWORD と同じ認証情報を受け入れる必要がある。
 WP_BASIC_USER = os.environ.get("WP_BASIC_USER", "")
 WP_BASIC_PASSWORD = os.environ.get("WP_BASIC_PASSWORD", "")
+
+# Google Drive 認証（OAuth 2.0 を優先、未設定時はサービスアカウントにフォールバック）
+GOOGLE_OAUTH_CLIENT_ID = os.environ.get("GOOGLE_OAUTH_CLIENT_ID", "")
+GOOGLE_OAUTH_CLIENT_SECRET = os.environ.get("GOOGLE_OAUTH_CLIENT_SECRET", "")
+GOOGLE_OAUTH_REFRESH_TOKEN = os.environ.get("GOOGLE_OAUTH_REFRESH_TOKEN", "")
+GOOGLE_SERVICE_ACCOUNT_JSON = os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON", "")
 
 DRIVE_SCOPES = ["https://www.googleapis.com/auth/drive"]
 
@@ -126,11 +134,37 @@ def fetch_aioseo_meta(post_id: int) -> dict:
 # ---------------------------------------------------------------------------
 
 def _drive_service():
-    sa_info = json.loads(GOOGLE_SERVICE_ACCOUNT_JSON)
-    creds = service_account.Credentials.from_service_account_info(
-        sa_info, scopes=DRIVE_SCOPES
+    """
+    Drive サービスを生成する。
+
+    OAuth 2.0 リフレッシュトークン（GOOGLE_OAUTH_REFRESH_TOKEN）が設定されている場合は
+    ユーザー認証を使用する。個人 Gmail アカウントのフォルダへの書き込みに必要。
+
+    未設定の場合はサービスアカウント認証にフォールバックする（Google Workspace 環境向け）。
+    """
+    if GOOGLE_OAUTH_REFRESH_TOKEN:
+        creds = Credentials(
+            token=None,
+            refresh_token=GOOGLE_OAUTH_REFRESH_TOKEN,
+            client_id=GOOGLE_OAUTH_CLIENT_ID,
+            client_secret=GOOGLE_OAUTH_CLIENT_SECRET,
+            token_uri="https://oauth2.googleapis.com/token",
+            scopes=DRIVE_SCOPES,
+        )
+        creds.refresh(GoogleRequest())
+        return build("drive", "v3", credentials=creds)
+
+    if GOOGLE_SERVICE_ACCOUNT_JSON:
+        sa_info = json.loads(GOOGLE_SERVICE_ACCOUNT_JSON)
+        creds = service_account.Credentials.from_service_account_info(
+            sa_info, scopes=DRIVE_SCOPES
+        )
+        return build("drive", "v3", credentials=creds)
+
+    raise RuntimeError(
+        "Google Drive 認証情報が設定されていません。"
+        "GOOGLE_OAUTH_REFRESH_TOKEN または GOOGLE_SERVICE_ACCOUNT_JSON を設定してください。"
     )
-    return build("drive", "v3", credentials=creds)
 
 
 def check_existing_doc(drive, doc_title: str) -> Optional[str]:
