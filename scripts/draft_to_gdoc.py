@@ -196,6 +196,7 @@ def build_html(post: dict, aioseo: dict) -> str:
     title = _strip_html(post["title"]["rendered"])
     acf = post.get("acf") or {}
 
+    content_raw = post.get("content", {}).get("rendered", "")
     excerpt_ja = _strip_html(post.get("excerpt", {}).get("rendered", ""))
     excerpt_en = acf.get("excerpt_en", "")
     seo_desc_ja = aioseo.get("seo_desc_ja") or acf.get("seo_description", "")
@@ -223,6 +224,9 @@ def build_html(post: dict, aioseo: dict) -> str:
 {section("SEO Description — 日本語", seo_desc_ja, "seo_desc_ja")}
 {section("SEO Description — 英語", seo_desc_en, "seo_desc_en", _char_count, "chars")}
 {section("Tagline", tagline, "tagline")}
+
+<h2>元記事本文</h2>
+{content_raw or "<p>（本文なし）</p>"}
 """
     return f"<!DOCTYPE html><html><body>{body}</body></html>"
 
