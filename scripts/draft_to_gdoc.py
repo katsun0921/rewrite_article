@@ -59,42 +59,13 @@ FIELD_HINTS = {
 # WordPress API
 # ---------------------------------------------------------------------------
 
-def _make_wp_session(auth: tuple[str, str]) -> requests.Session:
-    """指定した認証情報でセッションを生成する。"""
+def _make_wp_session() -> requests.Session:
+    """/wp-json/ 用セッションを生成する。WP Application Password で認証する。"""
     session = requests.Session()
-    session.auth = auth
+    session.auth = (WP_USERNAME, WP_APP_PASSWORD)
     # .htaccess の User-Agent フィルタ（"python" を含む UA をブロック）を回避する
     session.headers.update({"User-Agent": "wp-rewrite-bot/1.0"})
     return session
-
-
-def _request_with_fallback(method: str, url: str, **kwargs) -> requests.Response:
-    """
-    WP REST API リクエストを実行する。
-
-    WP_BASIC_USER が設定されている場合、サーバー Basic 認証（WP_BASIC_USER/WP_BASIC_PASSWORD）
-    と WP Application Password（WP_USERNAME/WP_APP_PASSWORD）の両方を順に試みる。
-    サーバー Basic 認証と WP REST API 認証は同一の Authorization ヘッダーを使用するため、
-    どちらの認証情報が有効かをフォールバックで判定する。
-    """
-    credentials = []
-    if WP_BASIC_USER:
-        credentials.append(("server-basic", WP_BASIC_USER, WP_BASIC_PASSWORD))
-    credentials.append(("wp-app-password", WP_USERNAME, WP_APP_PASSWORD))
-
-    last_resp = None
-    for label, user, passwd in credentials:
-        resp = _make_wp_session((user, passwd)).request(method, url, **kwargs)
-        if resp.status_code < 400:
-            return resp
-        print(
-            f"  [AUTH] {label} で失敗 ({resp.status_code}): {resp.text[:500]}",
-            file=sys.stderr,
-        )
-        last_resp = resp
-
-    last_resp.raise_for_status()
-    return last_resp  # unreachable
 
 
 def fetch_drafts(post_id: Optional[str], limit: int) -> list[dict]:
@@ -109,7 +80,7 @@ def fetch_drafts(post_id: Optional[str], limit: int) -> list[dict]:
         params["include"] = post_id
         params["per_page"] = 1
 
-    resp = _request_with_fallback("GET", url, params=params, timeout=30)
+    resp = _make_wp_session().get(url, params=params, timeout=30)
     resp.raise_for_status()
     return resp.json()
 
@@ -118,7 +89,7 @@ def fetch_aioseo_meta(post_id: int) -> dict:
     """AIOSEO REST API から SEO メタを取得する。失敗時は空辞書を返す。"""
     url = f"{WP_BASE_URL}/wp-json/aioseo/v1/posts/{post_id}"
     try:
-        resp = _request_with_fallback("GET", url, timeout=15)
+        resp = _make_wp_session().get(url, timeout=15)
         if resp.status_code == 200:
             data = resp.json()
             return {
