@@ -225,7 +225,7 @@ def build_html(post: dict, aioseo: dict) -> str:
 {section("SEO Description — 英語", seo_desc_en, "seo_desc_en", _char_count, "chars")}
 {section("Tagline", tagline, "tagline")}
 
-<h2>元記事本文（参照用・編集不要）</h2>
+<h2>元記事本文</h2>
 {content_raw or "<p>（本文なし）</p>"}
 """
     return f"<!DOCTYPE html><html><body>{body}</body></html>"
