@@ -26,6 +26,13 @@ WP_APP_PASSWORD = os.environ["WP_APP_PASSWORD"]
 GDOC_FOLDER_ID = os.environ["GDOC_FOLDER_ID"]
 GOOGLE_SERVICE_ACCOUNT_JSON = os.environ["GOOGLE_SERVICE_ACCOUNT_JSON"]
 
+# サーバーレベルの HTTP Basic 認証（任意）
+# WP_BASIC_USER が設定されている場合、全リクエストにサーバー Basic 認証を付与する。
+# WP REST API (/wp-json/) が Basic 認証対象外の場合は不要。
+# 対象の場合、サーバーは WP_USERNAME/WP_APP_PASSWORD と同じ認証情報を受け入れる必要がある。
+WP_BASIC_USER = os.environ.get("WP_BASIC_USER", "")
+WP_BASIC_PASSWORD = os.environ.get("WP_BASIC_PASSWORD", "")
+
 DRIVE_SCOPES = ["https://www.googleapis.com/auth/drive"]
 
 MAX_LIMIT = 20
@@ -44,7 +51,27 @@ FIELD_HINTS = {
 # WordPress API
 # ---------------------------------------------------------------------------
 
-def _wp_auth() -> tuple[str, str]:
+def _make_wp_session() -> requests.Session:
+    """
+    WP REST API 用セッションを生成する。
+
+    認証の優先順位:
+    1. WP_BASIC_USER が設定されている場合 → サーバー Basic 認証として使用し、
+       WP_USERNAME/WP_APP_PASSWORD で WP REST API 認証を行う。
+       ただし HTTP Basic 認証はリクエストごとに1セットのみ送信可能なため、
+       サーバーが /wp-json/ を Basic 認証対象外にするか、
+       サーバーの Basic 認証に WP Application Password を受け入れる構成が必要。
+    2. WP_BASIC_USER が未設定の場合 → WP Application Password のみで認証。
+    """
+    session = requests.Session()
+    if WP_BASIC_USER:
+        # サーバー Basic 認証を session のデフォルト auth に設定
+        session.auth = (WP_BASIC_USER, WP_BASIC_PASSWORD)
+    return session
+
+
+def _wp_api_auth() -> tuple[str, str]:
+    """WP REST API の Application Password 認証情報を返す。"""
     return (WP_USERNAME, WP_APP_PASSWORD)
 
 
@@ -60,7 +87,9 @@ def fetch_drafts(post_id: Optional[str], limit: int) -> list[dict]:
         params["include"] = post_id
         params["per_page"] = 1
 
-    resp = requests.get(url, params=params, auth=_wp_auth(), timeout=30)
+    session = _make_wp_session()
+    # WP REST API 認証を明示指定（WP_BASIC_USER 設定時は session.auth を上書きする）
+    resp = session.get(url, params=params, auth=_wp_api_auth(), timeout=30)
     resp.raise_for_status()
     return resp.json()
 
@@ -68,8 +97,9 @@ def fetch_drafts(post_id: Optional[str], limit: int) -> list[dict]:
 def fetch_aioseo_meta(post_id: int) -> dict:
     """AIOSEO REST API から SEO メタを取得する。失敗時は空辞書を返す。"""
     url = f"{WP_BASE_URL}/wp-json/aioseo/v1/posts/{post_id}"
+    session = _make_wp_session()
     try:
-        resp = requests.get(url, auth=_wp_auth(), timeout=15)
+        resp = session.get(url, auth=_wp_api_auth(), timeout=15)
         if resp.status_code == 200:
             data = resp.json()
             return {

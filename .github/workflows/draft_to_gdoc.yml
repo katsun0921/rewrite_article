@@ -37,6 +37,8 @@ jobs:
           WP_BASE_URL: ${{ secrets.WP_BASE_URL }}
           WP_USERNAME: ${{ secrets.WP_USERNAME }}
           WP_APP_PASSWORD: ${{ secrets.WP_APP_PASSWORD }}
+          WP_BASIC_USER: ${{ secrets.WP_BASIC_USER }}
+          WP_BASIC_PASSWORD: ${{ secrets.WP_BASIC_PASSWORD }}
           GDOC_FOLDER_ID: ${{ secrets.GDOC_FOLDER_ID }}
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
         run: |
