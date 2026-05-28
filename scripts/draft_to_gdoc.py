@@ -77,10 +77,10 @@ def _request_with_fallback(method: str, url: str, **kwargs) -> requests.Response
     last_resp = None
     for label, user, passwd in credentials:
         resp = _make_wp_session((user, passwd)).request(method, url, **kwargs)
-        if resp.status_code != 401 and resp.status_code != 403:
+        if resp.status_code < 400:
             return resp
         print(
-            f"  [AUTH] {label} で認証失敗 ({resp.status_code}): {resp.text[:200]}",
+            f"  [AUTH] {label} で失敗 ({resp.status_code}): {resp.text[:500]}",
             file=sys.stderr,
         )
         last_resp = resp
