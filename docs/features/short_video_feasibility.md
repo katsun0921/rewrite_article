@@ -3,7 +3,7 @@
 **対象サイト**: katsumascore.blog
 **作成日**: 2026-05-30
 **最終更新**: 2026-05-30
-**ステータス**: 調査フェーズ（実装前・方針確定済み）
+**ステータス**: S1 (PoC) 実装済み・Actions 実行待ち
 **結論**: ✅ 技術的に実現可能。既存の WP 取得基盤をそのまま流用できる。
 
 > **確定方針（2026-05-30）**
@@ -11,6 +11,10 @@
 > 2. 台本は **本文を LLM で要約**して生成する。
 > 3. TTS は **予算重視で幅広く比較**（→ [コスト試算](#コスト試算)）。
 > 4. スコープは **まず動画生成まで**。**将来的に投稿まで自動化**する（S4）。
+>
+> **PoC 採用構成（2026-05-30）**: 要約=**Gemini Flash** / TTS=**Google Cloud TTS Neural2** /
+> 背景=**アイキャッチ画像(Ken Burns)**。すべて Google + REST API で完結し、追加 Python 依存ゼロ。
+> 実装: `scripts/post_to_short.py` + `.github/workflows/post_to_short.yml`
 
 -----
 
@@ -258,13 +262,14 @@ youtube-shorts-pipeline 等）、設計の参考にできる。
 
 | フェーズ | 内容 | 成果物 | 自動化度 |
 |---------|------|--------|---------|
-| **S1: 検証 PoC** | publish記事(指定ID) → LLM要約台本 → TTS → 字幕 → MP4 を Actions で生成 | `scripts/post_to_short.py`（最小版）+ `post_to_short.yml` | 動画生成のみ |
+| **S1: 検証 PoC** ✅実装済 | publish記事(指定ID) → LLM要約台本 → TTS → 字幕 → MP4 を Actions で生成 | `scripts/post_to_short.py` + `post_to_short.yml` | 動画生成のみ |
 | **S2: Drive 連携** | 生成 MP4 を Drive に保管・Step Summary にリンク/プレビュー出力 | 既存 `_drive_service` 流用 | 生成+保管 |
 | **S3: 品質向上** | LLM 台本プロンプト最適化・背景(アイキャッチ)・BGM・字幕スタイル | テンプレート整備 | 生成+保管 |
 | **S4: 投稿自動化（将来）** | YouTube 自動投稿（クォータ内）→ TikTok（アプリ審査後） | OAuth(youtube.upload)拡張・投稿スクリプト | 投稿まで |
 
 **方針④に従い S1〜S3（生成まで）を先に完成させ、S4（投稿）は将来対応**。
-次の一手は **S1（PoC）**: GitHub Actions で post_id を渡し、要約→TTS→字幕→MP4 を1本生成して質を目視確認。
+**S1 は実装済み**。GitHub Secrets（`GEMINI_API_KEY` / `GOOGLE_TTS_API_KEY`）を登録し、
+Actions の "WP Post → ショート動画 (PoC)" を post_id 指定で実行 → artifact の MP4 を目視確認する。
 
 -----
 
