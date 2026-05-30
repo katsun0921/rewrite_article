@@ -71,9 +71,11 @@ GitHub Actions > Google Doc → WP 書き戻し > Run workflow
 │       ├── gdoc_to_wp.yml        # Phase 3
 │       └── post_to_short.yml     # ショート動画 S1 (PoC)
 ├── docs/
-│   └── features/
-│       ├── spec.md               # リライト仕様書
-│       └── short_video_feasibility.md  # ショート動画 実現可能性調査
+│   ├── features/
+│   │   ├── spec.md               # リライト仕様書
+│   │   └── short_video_feasibility.md  # ショート動画 実現可能性調査
+│   └── prompts/
+│       └── short_video_script.md # ショート動画 台本生成プロンプト
 ├── scripts/
 │   ├── draft_to_gdoc.py          # Phase 1 スクリプト
 │   ├── gdoc_to_wp.py             # Phase 3 スクリプト（未実装）

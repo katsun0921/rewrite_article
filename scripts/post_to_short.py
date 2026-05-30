@@ -48,6 +48,12 @@ FPS = 30
 # Noto Sans CJK（ワークフローで apt install fonts-noto-cjk 済みを想定）
 SUBTITLE_FONT = os.environ.get("SUBTITLE_FONT", "Noto Sans CJK JP")
 
+# 台本生成プロンプト（別 md ファイルで管理）。`## プロンプト本文` 以下を使用する。
+PROMPT_PATH = os.environ.get(
+    "SCRIPT_PROMPT_PATH",
+    os.path.join(os.path.dirname(__file__), "..", "docs", "prompts", "short_video_script.md"),
+)
+
 
 # ---------------------------------------------------------------------------
 # ① WordPress API（draft_to_gdoc.py の仕組みを応用）
@@ -94,20 +100,21 @@ def _strip_html(text: str) -> str:
     return re.sub(r"<[^>]+>", "", text or "").strip()
 
 
+def _load_prompt_template() -> str:
+    """プロンプト md の `## プロンプト本文` 見出し（行頭）以下のテンプレートを読み込む。"""
+    with open(PROMPT_PATH, encoding="utf-8") as f:
+        lines = f.read().splitlines()
+    marker = "## プロンプト本文"
+    for i, line in enumerate(lines):
+        if line.strip() == marker:
+            return "\n".join(lines[i + 1:]).strip()
+    raise RuntimeError(f"プロンプトファイルに見出し '{marker}' が見つかりません: {PROMPT_PATH}")
+
+
 def generate_script(title: str, content: str) -> str:
     """記事本文を縦型ショート動画用の台本に要約する。"""
     plain = _strip_html(content)[:6000]  # 入力トークン節約のため先頭を使用
-    prompt = (
-        "あなたは縦型ショート動画（TikTok / YouTube Shorts）の構成作家です。\n"
-        "以下のブログ記事を、ナレーションとして読み上げる台本に要約してください。\n\n"
-        "# 制約\n"
-        "- 全体で300〜400字（30〜50秒で読める長さ）\n"
-        "- 冒頭2秒で惹きつける『フック』→『本編（記事の要点）』→『CTA（続きはブログで等）』の構成\n"
-        "- 話し言葉。視聴者に語りかける口調\n"
-        "- 絵文字・記号・見出し・ナレーション以外の文字は出力しない（読み上げる文章のみ）\n\n"
-        f"# 記事タイトル\n{title}\n\n"
-        f"# 記事本文\n{plain}\n"
-    )
+    prompt = _load_prompt_template().format(title=title, content=plain)
     url = (
         f"https://generativelanguage.googleapis.com/v1beta/models/"
         f"{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}"
